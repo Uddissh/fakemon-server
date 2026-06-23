@@ -1,0 +1,57 @@
+{
+  "name": "fakemon-server",
+  "version": "1.0.0",
+  "description": "Auth, validation, sprite pipeline, and database layer for Fakemon Chaos",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "fakemon",
+    "pokemon",
+    "battle-simulator",
+    "showdown"
+  ],
+  "author": "Uddissh",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.22.4",
+    "drizzle-orm": "^0.29.1",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1",
+    "cloudinary": "^1.41.0",
+    "uuid": "^9.0.1",
+    "bad-words": "^3.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/pg": "^8.10.9",
+    "@types/uuid": "^9.0.7",
+    "@types/bad-words": "^3.0.3",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "drizzle-kit": "^0.20.10",
+    "vitest": "^1.1.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0"
+  }
+}

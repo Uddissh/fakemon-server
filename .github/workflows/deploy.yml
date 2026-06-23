@@ -1,0 +1,93 @@
+# ============================================================
+# Fakemon Chaos — CI/CD Deploy Workflow
+# File:  .github/workflows/deploy.yml
+# Repo:  fakemon-server (Uddissh)
+#
+# Triggers on every push to main.
+# SSHs into the Oracle Cloud instance and runs:
+#   git pull → drizzle-kit migrate → docker compose up -d --build
+#
+# Required GitHub Secrets (set in repo Settings → Secrets):
+#   ORACLE_HOST       — Public IP of the Oracle Cloud instance
+#   ORACLE_USER       — SSH username (default: ubuntu or opc)
+#   ORACLE_SSH_KEY    — Private SSH key (paste full PEM content)
+#   ORACLE_DEPLOY_DIR — Absolute path to the repo on the server
+#                       e.g. /home/ubuntu/fakemon-server
+# ============================================================
+
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: SSH Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ────────────────────────────────────────────
+      # 1. Checkout (for linting/type-check in CI)
+      # ────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ────────────────────────────────────────────
+      # 2. Set up Node.js for type-check + lint
+      # ────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      # Uncomment when you have tests written:
+      # - name: Run unit tests
+      #   run: npm test
+
+      # ────────────────────────────────────────────
+      # 3. SSH Deploy to Oracle Cloud
+      # Only runs if type-check passes.
+      # ────────────────────────────────────────────
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:        ${{ secrets.ORACLE_HOST }}
+          username:    ${{ secrets.ORACLE_USER }}
+          key:         ${{ secrets.ORACLE_SSH_KEY }}
+          timeout:     300s
+          script: |
+            set -e
+
+            echo "==> Navigating to deploy directory"
+            cd ${{ secrets.ORACLE_DEPLOY_DIR }}
+
+            echo "==> Pulling latest code from main"
+            git pull origin main
+
+            echo "==> Installing production dependencies"
+            npm ci --omit=dev
+
+            echo "==> Running database migrations"
+            npx drizzle-kit migrate
+
+            echo "==> Rebuilding and restarting containers"
+            docker compose up -d --build --remove-orphans
+
+            echo "==> Pruning unused Docker images"
+            docker image prune -f
+
+            echo "==> Checking container health"
+            sleep 10
+            docker compose ps
+
+            echo "==> Deploy complete"

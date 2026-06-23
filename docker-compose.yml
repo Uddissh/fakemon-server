@@ -1,0 +1,99 @@
+# ============================================================
+# Fakemon Chaos — Docker Compose
+# File:  docker-compose.yml
+# Repo:  fakemon-server (Uddissh)
+#
+# Services:
+#   nginx       — Reverse proxy. Routes traffic to auth-server
+#                 and the Showdown server (separate repo/host).
+#   auth-server — Node.js/Express: Discord OAuth2, Patreon
+#                 webhooks, sprite pipeline, team validation.
+#
+# NOTE: PostgreSQL is NOT a container here.
+#       It lives on Supabase (orbitron project).
+#       Only app services + Nginx run in this Compose file.
+#
+# NOTE: The Showdown battle server (fakemon-showdown repo) runs
+#       in its own Compose file managed by the teammate.
+#       Nginx here proxies through to it via the shared
+#       Docker network or via its public host if deployed
+#       on a separate machine.
+#
+# Usage:
+#   Development:   docker compose up --build
+#   Production:    docker compose -f docker-compose.yml up -d --build
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # ──────────────────────────────────────────────────────────
+  # AUTH SERVER
+  # Node.js/Express service.
+  # Handles: Discord OAuth2, Patreon webhooks,
+  #          JWT issuance, sprite upload, team validation.
+  # ──────────────────────────────────────────────────────────
+  auth-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fakemon_auth
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      # Internal only — Nginx proxies to this port.
+      # Do NOT expose 3001 directly to the internet.
+      - "127.0.0.1:3001:3001"
+    networks:
+      - fakemon_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      # Logs persisted to host for debugging.
+      - ./logs:/app/logs
+
+  # ──────────────────────────────────────────────────────────
+  # NGINX REVERSE PROXY
+  # Routes:
+  #   api.fakemonchaos.com  → auth-server:3001
+  #   play.fakemonchaos.com → showdown server
+  #     (either another container on this host via fakemon_net,
+  #      or the teammate's separately deployed Showdown server
+  #      via proxy_pass to its public IP)
+  #
+  # TLS: Certbot (Let's Encrypt) via DuckDNS for development.
+  #      On Oracle Cloud: use Certbot directly on the VM.
+  # ──────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: fakemon_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./nginx/logs:/var/log/nginx
+    networks:
+      - fakemon_net
+    depends_on:
+      auth-server:
+        condition: service_healthy
+
+# ──────────────────────────────────────────────────────────
+# NETWORKS
+# ──────────────────────────────────────────────────────────
+networks:
+  fakemon_net:
+    driver: bridge
