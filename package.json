@@ -13,6 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:verify": "node scripts/verify-migrations.js",
+    "auth:test": "node scripts/test-discord-auth.js",
     "lint": "eslint src --ext .ts"
   },
   "keywords": [
