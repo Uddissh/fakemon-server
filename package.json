@@ -14,8 +14,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:verify": "node scripts/verify-migrations.js",
+    "db:setup": "node scripts/setup-supabase.js",
     "auth:test": "node scripts/test-discord-auth.js",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "vercel:build": "vercel build",
+    "vercel:deploy": "vercel --prod"
   },
   "keywords": [
     "fakemon",
